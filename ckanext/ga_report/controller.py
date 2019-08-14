@@ -478,13 +478,13 @@ def _get_top_publishers(limit=100):
     month = c.month or 'All'
     connection = model.Session.connection()
     q = """
-        select department_id, sum(pageviews::int) views, sum(visits::int) visits
+        select department_id, sum(pageviews::int) "views", sum(visits::int) visits
         from ga_url
         where department_id <> ''
           and package_id <> ''
           and url like '%%/dataset/%%'
           and period_name=%s
-        group by department_id order by views desc
+        group by department_id order by "views" desc
         """
     if limit:
         q = q + " limit %s;" % (limit)
@@ -505,13 +505,13 @@ def _get_top_publishers_graph(limit=20):
     '''
     connection = model.Session.connection()
     q = """
-        select department_id, sum(pageviews::int) views
+        select department_id, sum(pageviews::int) "views"
         from ga_url
         where department_id <> ''
           and package_id <> ''
           and url like '%%/dataset/%%'
           and period_name='All'
-        group by department_id order by views desc
+        group by department_id order by "views" desc
         """
     if limit:
         q = q + " limit %s;" % (limit)
@@ -530,10 +530,13 @@ def _get_top_publishers_graph(limit=20):
         .group_by( GA_Url.department_id, GA_Url.period_name )
     graph_dict = {}
     for dept_id,period_name,views in q:
-        graph_dict[dept_id] = graph_dict.get( dept_id, {
-            'name' : model.Group.get(dept_id).title,
-            'raw' : {}
-            })
+        group = model.Group.get(dept_id)
+        if not group:
+            log.debug('Unable to find group: %s', dept_id)
+        graph_dict[dept_id] = graph_dict.get(dept_id, {
+            'name': group.title if group else dept_id,
+            'raw': {}
+        })
         graph_dict[dept_id]['raw'][period_name] = views
     return [ graph_dict[id] for id in department_ids ]
 
